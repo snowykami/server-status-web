@@ -29,7 +29,8 @@ export interface Status {
         };
         disks: {
             [key: string]: {
-                [key: string]: number;
+                used: number;
+                total: number;
             };
         };
         net: {

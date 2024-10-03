@@ -2,6 +2,7 @@
 import {Status} from "../api";
 import {computed, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts";
+import {format2Size, formatSizeByUnit, getLinuxReleaseIcon} from "../api/utils.ts";
 
 const props = defineProps<{
   status: Status
@@ -14,36 +15,66 @@ const status = computed(
 const cpuChartRef = ref(null);
 const memoryChartRef = ref(null);
 const swapChartRef = ref(null);
-const diskChartRef = ref(null);
 
-onMounted(
-    () => {
-      setOptions()
-    }
-)
+// 网络
+const netChartRef = ref(null);
+let netStats: [number, number, number][] = []
 
-function setOptions() {
+const dotColor = ref('#22c55e')
+const deltaTime = ref('0')
+// const isDiskCollapsed = ref(status.value.hardware.disks)
+// const isDiskOpen = ref(false)
+const os = computed(() => {
+  return getLinuxReleaseIcon(status.value.meta.os.name, status.value.meta.os.version)
+})
+
+const memDetail = computed(() => {
+  return format2Size(status.value.hardware.mem.used, status.value.hardware.mem.total)
+})
+
+const swapDetail = computed(() => {
+  return status.value.hardware.swap.total > 0 ? format2Size(status.value.hardware.swap.used, status.value.hardware.swap.total) : 'N/A'
+})
+
+
+function onMountedFunc() {
   const cpuChart = echarts.init(cpuChartRef.value);
   const memoryChart = echarts.init(memoryChartRef.value);
   const swapChart = echarts.init(swapChartRef.value);
-  const diskChart = echarts.init(diskChartRef.value);
+  const netChart = echarts.init(netChartRef.value);
+  const titleStyle = {
+    color: 'rgba(0, 0, 0, 0.8)',
+    fontSize: 13,
+  }
+  const radius = ['65%', '90%']
 
-  function setOption() {
+  const hwColor = ['#4c4c4c', '#e3e3e3']
+  const netColor = ['#4c4c4c', '#bababa']
+
+  function update() {
+    const timeDiff = (Date.now()) / 1000 - status.value.meta.observed_at
+    deltaTime.value = timeDiff.toFixed(1)
+    netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])
+    if (netStats.length > 20) {
+      netStats.shift()
+    }
+
+    if (timeDiff > 30) {
+      dotColor.value = '#ff4d4f'
+    }
     cpuChart.setOption(
         {
+          color: hwColor,
           title: {
-            text: 'CPU',
+            text: status.value.hardware.cpu.percent + '%',
             left: 'center',
             top: 'center',
-            textStyle: {
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
-            }
+            textStyle: titleStyle
           },
           series: [
             {
               type: 'pie',
-              radius: ['50%', '70%'],
+              radius: radius,
               avoidLabelOverlap: false,
               label: {
                 show: false,
@@ -59,14 +90,10 @@ function setOptions() {
               labelLine: {
                 show: false
               },
-              // data: [
-              //   {value: status.value.hardware.cpu.percent, name: 'CPU'},
-              //   {value: 100 - status.value.hardware.cpu.percent, name: '空闲'}
-              // ]
               data: computed(
                   () => [
-                    {value: status.value.hardware.cpu.percent, name: 'CPU'},
-                    {value: 100 - status.value.hardware.cpu.percent, name: '空闲'}
+                    {value: status.value.hardware.cpu.percent},
+                    {value: 100 - status.value.hardware.cpu.percent}
                   ]
               ).value
             }
@@ -75,19 +102,17 @@ function setOptions() {
     )
     memoryChart.setOption(
         {
+          color: hwColor,
           title: {
-            text: 'Memory',
+            text: `${(status.value.hardware.mem.used / status.value.hardware.mem.total * 100).toFixed(1)}%`,
             left: 'center',
             top: 'center',
-            textStyle: {
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
-            }
+            textStyle: titleStyle
           },
           series: [
             {
               type: 'pie',
-              radius: ['50%', '70%'],
+              radius: radius,
               avoidLabelOverlap: false,
               label: {
                 show: false,
@@ -104,8 +129,8 @@ function setOptions() {
                 show: false
               },
               data: [
-                {value: props.status.hardware.mem.used, name: 'Memory'},
-                {value: props.status.hardware.mem.total - props.status.hardware.mem.used, name: '空闲'}
+                {value: status.value.hardware.mem.used},
+                {value: status.value.hardware.mem.total - status.value.hardware.mem.used}
               ]
             }
           ]
@@ -113,19 +138,17 @@ function setOptions() {
     )
     swapChart.setOption(
         {
+          color: hwColor,
           title: {
-            text: 'Swap',
+            text: status.value.hardware.swap.total > 0 ? `${(status.value.hardware.swap.used / status.value.hardware.swap.total * 100).toFixed(1)}%` : 'N/A',
             left: 'center',
             top: 'center',
-            textStyle: {
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
-            }
+            textStyle: titleStyle,
           },
           series: [
             {
               type: 'pie',
-              radius: ['50%', '70%'],
+              radius: radius,
               avoidLabelOverlap: false,
               label: {
                 show: false,
@@ -142,69 +165,173 @@ function setOptions() {
                 show: false
               },
               data: [
-                {value: props.status.hardware.swap.used, name: 'Swap'},
-                {value: props.status.hardware.swap.total - props.status.hardware.swap.used, name: '空闲'}
+                {value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.used : 0},
+                {
+                  value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.total - status.value.hardware.swap.used : 100
+                }
               ]
             }
           ]
         }
     )
-    diskChart.setOption(
+
+    netChart.setOption(
         {
+          color: netColor,
           title: {
-            text: 'Disk',
-            left: 'center',
-            top: 'center',
-            textStyle: {
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 14,
+            text: 'Network',
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'cross',
+              label: {
+                backgroundColor: '#6a7985'
+              }
             }
           },
+          toolbox: {
+            feature: {
+              saveAsImage: {}
+            }
+          },
+          grid: {
+            top: '25%',
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: [
+            {
+              type: 'category',
+              boundaryGap: false,
+              data: netStats.map(item => item[0])
+            }
+          ],
+          yAxis: [
+            {
+              type: 'value',
+              axisLabel: {
+                formatter: function (value: number) {
+                  console.log(value)
+                  return formatSizeByUnit(value, null, 'b')
+                }
+              }
+            }
+          ],
+          series: [
+            {
+              name: 'Up',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: netStats.map(item => item[1])
+            },
+            {
+              name: 'Down',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: netStats.map(item => item[2])
+            }
+          ]
         }
     )
+
   }
 
-  setOption()
+  update()
   watch(
       () => status.value,
       () => {
-        setOption()
+        update()
       }
   )
 }
 
 
+onMounted(
+    () => {
+      onMountedFunc()
+    }
+)
+
 </script>
 
 <template>
   <div class="host">
-    <div class="meta-1" style="display: flex; justify-content: flex-start">
-      <span>{{ props.status.meta.name }}</span><span>{{ props.status.meta.id }}</span>
+    <div class="meta-1" style="display: flex; justify-content: space-between">
+      <div class="meta1-left" style="display: flex; justify-content: flex-start">
+        <span>{{ props.status.meta.name }}</span>
+      </div>
+      <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
+        <div style="margin-right: 5px">{{ deltaTime }}s ago</div>
+        <div class="dot" :style="{backgroundColor: dotColor}"
+             style="height: 15px; width: 15px; border-radius: 50%"></div>
+      </div>
     </div>
     <div class="meta-2" style="display: flex">
+      <div class="section">
+        <img class="icon" :src="os.icon" alt="system">
+        <span>{{ os.name }}</span>
+      </div>
       <div class="section">
         <img class="icon" src="/svg/location.svg" alt="system">
         <span>{{ props.status.meta.location }}</span>
       </div>
-      <div class="section">
-        <img class="icon" src="/svg/system.svg" alt="system">
-        <span>{{ props.status.meta.os.name }}</span>
+
+    </div>
+    <!--    <div class="labels" style="display: flex; justify-content: flex-start">-->
+    <!--      <span class="label" v-for="label in props.status.meta.labels" :key="label">{{ label }}</span>-->
+    <!--    </div>-->
+    <div class="charts-container" style="display: flex; justify-content: space-between">
+      <div class="cpu-info hw-info">
+        <div class="chart" ref="cpuChartRef"></div>
+        <div class="hw-title">CPU</div>
+        <div class="hw-detail">{{ status.hardware.cpu.cores }}c{{ status.hardware.cpu.logics }}t</div>
+      </div>
+      <div class="memory-info hw-info">
+        <div class="chart" ref="memoryChartRef"></div>
+        <div class="hw-title">Mem</div>
+        <div class="hw-detail">{{ memDetail }}</div>
+      </div>
+      <div class="swap-info hw-info">
+        <div class="chart" ref="swapChartRef"></div>
+        <div class="hw-title">Swap</div>
+        <div class="hw-detail">{{ swapDetail }}</div>
       </div>
     </div>
-    <div class="labels" style="display: flex; justify-content: flex-start">
-      <span class="label" v-for="label in props.status.meta.labels" :key="label">{{ label }}</span>
-    </div>
-    <div class="charts-container" style="display: flex">
-      <div class="chart" ref="cpuChartRef"></div>
-      <div class="chart" ref="memoryChartRef"></div>
-      <div class="chart" ref="swapChartRef"></div>
-      <div class="chart" ref="diskChartRef"></div>
+    <div class="net">
+      <div class="net-chart" ref="netChartRef"></div>
     </div>
   </div>
 
 </template>
 
 <style scoped>
+.meta-2 {
+  margin-top: 0.5em;
+}
+
+.labels {
+  margin-top: 0.5em;
+
+  .label {
+    padding: 2px 5px;
+    border-radius: 5px;
+    margin-right: 10px;
+    background-color: black;
+    color: white;
+  }
+}
+
 .host {
   padding: 1em;
   border: 1px solid #ccc;
@@ -215,24 +342,53 @@ function setOptions() {
 }
 
 .icon {
-  margin-right: 0.5em;
-  height: 20px;
+  margin-right: 0.3em;
+  height: 16px;
 }
 
 .section {
   display: flex;
   margin-right: 10px;
+  align-items: center;
 }
 
-.label {
-  background-color: #535bf2;
-  padding: 2px 5px;
-  border-radius: 5px;
-  margin-right: 10px;
+
+.charts-container {
+  margin-top: 0.5rem;
+
+  .hw-info {
+    width: 30%;
+    align-items: center;
+
+    .chart {
+      width: 100%;
+      aspect-ratio: 1;
+    }
+
+    .hw-title {
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .hw-detail {
+      text-align: center;
+      font-size: 0.7rem;
+    }
+  }
 }
 
-.chart {
-  width: 150px;
-  height: 150px;
+.net{
+  margin-top: 0.5rem;
+  .net-title {
+    font-size: 0.9rem;
+  }
+  .net-detail {
+    font-size: 0.7rem;
+  }
+  .net-chart{
+    width: 100%;
+    aspect-ratio: 2;
+  }
 }
+
 </style>

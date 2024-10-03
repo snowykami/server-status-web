@@ -30,16 +30,8 @@ onMounted(async () => {
 <style scoped>
 .grid-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 10px;
   padding: 10px;
-}
-
-.grid-item {
-  background-color: #3bb7c3;
-  padding: 20px;
-  text-align: center;
-  border: 1px solid #3bb7c3;
-  border-radius: 5px;
 }
 </style>

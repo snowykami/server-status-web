@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import Nav from './components/Nav.vue'
+// import Nav from './components/Nav.vue'
 console.log('App.vue')
 </script>
 
 <template>
-<Nav/>
   <router-view/>
 </template>
 
