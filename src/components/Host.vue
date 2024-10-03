@@ -2,7 +2,7 @@
 import {Status} from "../api";
 import {computed, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts";
-import {format2Size, formatSizeByUnit, getLinuxReleaseIcon} from "../api/utils.ts";
+import {format2Size, formatDate, formatSizeByUnit, getLinuxReleaseIcon} from "../api/utils.ts";
 
 const props = defineProps<{
   status: Status
@@ -54,7 +54,11 @@ function onMountedFunc() {
   function update() {
     const timeDiff = (Date.now()) / 1000 - status.value.meta.observed_at
     deltaTime.value = timeDiff.toFixed(1)
-    netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])
+    // 判断该时间与上一个时间不同才push
+    if (netStats.length === 0 || netStats[netStats.length - 1][0] !== status.value.meta.observed_at){
+      netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])
+    }
+
     if (netStats.length > 20) {
       netStats.shift()
     }
@@ -206,7 +210,12 @@ function onMountedFunc() {
             {
               type: 'category',
               boundaryGap: false,
-              data: netStats.map(item => item[0])
+              data: netStats.map(item => item[0]),
+              axisLabel: {
+                formatter: function (value: number) {
+                  return formatDate(value, true)
+                }
+              }
             }
           ],
           yAxis: [
@@ -295,7 +304,7 @@ onMounted(
       <div class="cpu-info hw-info">
         <div class="chart" ref="cpuChartRef"></div>
         <div class="hw-title">CPU</div>
-        <div class="hw-detail">{{ status.hardware.cpu.cores }}c{{ status.hardware.cpu.logics }}t</div>
+        <div class="hw-detail">{{ status.hardware.cpu.cores }}C {{ status.hardware.cpu.logics }}T</div>
       </div>
       <div class="memory-info hw-info">
         <div class="chart" ref="memoryChartRef"></div>

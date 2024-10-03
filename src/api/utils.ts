@@ -25,8 +25,8 @@ export function formatSizeByUnit(bytes: number, unit: string | null = null, suff
     if( bytes == 0 ){
         return '0'
     }
-    if (unit && bytes < 1024) {
-        return bytes.toFixed(0) + unit
+    if (bytes < 1024) {
+        return bytes.toFixed(0) + (suffix ? suffix : '')
     }
     const units = ['', 'K', 'M', 'G', 'T', 'P', 'E']
     let i = unit ? units.indexOf(unit) : Math.floor(Math.log2(bytes) / 10)
@@ -49,4 +49,11 @@ export function format2Size(num1: number, num2: number, suffix: string | null = 
     const r2 = formatSizeToNumAndUnit(num2)
     const n1 = formatSizeByUnit(num1, r2.unit)
     return `${n1}/${r2.num.toFixed(1)}${r2.unit}${suffix}`
+}
+
+export function formatDate(timestamp: number, timeOnly: boolean = false){
+    const d = new Date(timestamp * 1000)
+    const date = d.toLocaleDateString()
+    const time = d.toLocaleTimeString()
+    return timeOnly ? time : `${date} ${time}`
 }
