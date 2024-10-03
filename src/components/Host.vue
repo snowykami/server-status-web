@@ -223,8 +223,7 @@ function onMountedFunc() {
               type: 'value',
               axisLabel: {
                 formatter: function (value: number) {
-                  console.log(value)
-                  return formatSizeByUnit(value, null, 'b')
+                  return formatSizeByUnit(value*8, null, 'b')
                 }
               }
             }
