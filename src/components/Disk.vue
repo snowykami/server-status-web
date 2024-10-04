@@ -1,26 +1,24 @@
 <script setup lang="ts">
-
-import {format2Size, getBaseColor, getBlankColor} from "../api/utils.ts";
+import { format2Size, getBaseColor, getBlankColor } from '../api/utils.ts';
 
 const props = defineProps<{
-  mountpoint: string
-  device: string
-  used: number
-  total: number
-  fstype: string
-}>()
+  mountpoint: string;
+  device: string;
+  used: number;
+  total: number;
+  fstype: string;
+}>();
 
-const colorUsed = getBaseColor(props.used / props.total * 100)
-const colorBlank = getBlankColor(props.used / props.total * 100)
-
+const colorUsed = getBaseColor(props.used / props.total * 100);
+const colorBlank = getBlankColor(props.used / props.total * 100);
 </script>
 
 <template>
-  <div class="disk" :style="{backgroundColor: colorBlank}">
-    <div class="disk-used" :style="{width: props.used / props.total * 100 + '%', backgroundColor: colorUsed}"></div>
+  <div class="disk" :style="{ backgroundColor: colorBlank }">
+    <div class="disk-used" :style="{ width: props.used / props.total * 100 + '%', backgroundColor: colorUsed }"></div>
     <div class="hover-text">
       <div class="left-text">
-        <span class="disk-text">{{props.mountpoint}}</span>
+        <span class="disk-text">{{ props.mountpoint }}</span>
       </div>
       <div class="right-text">
         <span class="disk-text">{{ format2Size(props.used, props.total) }} [{{ props.fstype }}]</span>
@@ -30,7 +28,6 @@ const colorBlank = getBlankColor(props.used / props.total * 100)
 </template>
 
 <style scoped>
-
 :host {
   --text-size: 2px;
 }
@@ -39,11 +36,12 @@ const colorBlank = getBlankColor(props.used / props.total * 100)
   margin-top: 0.5rem;
   height: 2rem;
   width: 100%;
-  border-radius: 100px;
+  border-radius: 1rem;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* Ensure the used part doesn't overflow */
 }
 
 .disk-used {
@@ -51,7 +49,7 @@ const colorBlank = getBlankColor(props.used / props.total * 100)
   position: absolute;
   left: 0;
   top: 0;
-  border-radius: 100px 0 0 100px;
+  clip-path: inset(0 0 0 0 round var(--border-radius)); /* Apply border-radius using clip-path */
 }
 
 .hover-text {
