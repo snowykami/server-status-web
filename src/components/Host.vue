@@ -2,7 +2,18 @@
 import {Status} from "../api";
 import {computed, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts";
-import {format2Size, formatDate, formatSizeByUnit, getLinuxReleaseIcon} from "../api/utils.ts";
+import {
+  format2Size,
+  formatDate,
+  formatSizeByUnit,
+  formatUptime,
+  getBaseColor,
+  getBlankColor,
+  getLinuxReleaseIcon,
+  onlineTimeout
+} from "../api/utils.ts";
+
+import OutlineAnime from "./OutlineAnime.vue";
 
 const props = defineProps<{
   status: Status
@@ -12,6 +23,8 @@ const status = computed(
     () => props.status
 )
 
+const uptime = ref(formatUptime(status.value.meta.uptime))
+console.log(uptime.value)
 const cpuChartRef = ref(null);
 const memoryChartRef = ref(null);
 const swapChartRef = ref(null);
@@ -19,11 +32,14 @@ const swapChartRef = ref(null);
 // 网络
 const netChartRef = ref(null);
 let netStats: [number, number, number][] = []
-
-const dotColor = ref('#22c55e')
+const isOnline = ref(true)
+const dotColor = computed(
+    () => isOnline.value ? '#22c55e' : '#ff4d4f'
+)
+const spreadColor = computed(
+    () => isOnline.value ? '#80ffb0' : '#fd8182'
+)
 const deltaTime = ref('0')
-// const isDiskCollapsed = ref(status.value.hardware.disks)
-// const isDiskOpen = ref(false)
 const os = computed(() => {
   return getLinuxReleaseIcon(status.value.meta.os.name, status.value.meta.os.version)
 })
@@ -36,7 +52,6 @@ const swapDetail = computed(() => {
   return status.value.hardware.swap.total > 0 ? format2Size(status.value.hardware.swap.used, status.value.hardware.swap.total) : 'N/A'
 })
 
-
 function onMountedFunc() {
   const cpuChart = echarts.init(cpuChartRef.value);
   const memoryChart = echarts.init(memoryChartRef.value);
@@ -48,14 +63,19 @@ function onMountedFunc() {
   }
   const radius = ['65%', '90%']
 
-  const hwColor = ['#4c4c4c', '#e3e3e3']
-  const netColor = ['#4c4c4c', '#bababa']
+  const netColor = ['#a2d8f4', '#10a0ed']
+  setInterval(() => {
+    if (isOnline.value) {
+      const deltaTime = (Date.now()) / 1000 - status.value.meta.observed_at
+      uptime.value = formatUptime(status.value.meta.uptime + deltaTime)
+    }
+  }, 1000)
 
   function update() {
     const timeDiff = (Date.now()) / 1000 - status.value.meta.observed_at
     deltaTime.value = timeDiff.toFixed(1)
     // 判断该时间与上一个时间不同才push
-    if (netStats.length === 0 || netStats[netStats.length - 1][0] !== status.value.meta.observed_at){
+    if (netStats.length === 0 || netStats[netStats.length - 1][0] !== status.value.meta.observed_at) {
       netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])
     }
 
@@ -63,12 +83,13 @@ function onMountedFunc() {
       netStats.shift()
     }
 
-    if (timeDiff > 30) {
-      dotColor.value = '#ff4d4f'
-    }
+    isOnline.value = timeDiff <= onlineTimeout;
     cpuChart.setOption(
         {
-          color: hwColor,
+          color: [
+            getBaseColor(status.value.hardware.cpu.percent),
+            getBlankColor(status.value.hardware.cpu.percent)
+          ],
           title: {
             text: status.value.hardware.cpu.percent + '%',
             left: 'center',
@@ -106,7 +127,10 @@ function onMountedFunc() {
     )
     memoryChart.setOption(
         {
-          color: hwColor,
+          color: [
+            getBaseColor(status.value.hardware.mem.used / status.value.hardware.mem.total * 100),
+            getBlankColor(status.value.hardware.mem.used / status.value.hardware.mem.total * 100)
+          ],
           title: {
             text: `${(status.value.hardware.mem.used / status.value.hardware.mem.total * 100).toFixed(1)}%`,
             left: 'center',
@@ -142,7 +166,10 @@ function onMountedFunc() {
     )
     swapChart.setOption(
         {
-          color: hwColor,
+          color: [
+            getBaseColor(status.value.hardware.swap.used / status.value.hardware.swap.total * 100, status.value.hardware.swap.total <= 0),
+            getBlankColor(status.value.hardware.swap.used / status.value.hardware.swap.total * 100, status.value.hardware.swap.total <= 0)
+          ],
           title: {
             text: status.value.hardware.swap.total > 0 ? `${(status.value.hardware.swap.used / status.value.hardware.swap.total * 100).toFixed(1)}%` : 'N/A',
             left: 'center',
@@ -223,7 +250,7 @@ function onMountedFunc() {
               type: 'value',
               axisLabel: {
                 formatter: function (value: number) {
-                  return formatSizeByUnit(value*8, null, 'b')
+                  return formatSizeByUnit(value * 8, null, 'b')
                 }
               }
             }
@@ -276,29 +303,24 @@ onMounted(
 <template>
   <div class="host">
     <div class="meta-1" style="display: flex; justify-content: space-between">
-      <div class="meta1-left" style="display: flex; justify-content: flex-start">
-        <span>{{ props.status.meta.name }}</span>
+      <div class="meta1-left" style="display: flex; justify-content: flex-start; align-items: center">
+        <OutlineAnime class="outline-anime" :color="dotColor" :spreadColor="spreadColor" :is-online="isOnline"/>
+        <span class="host-name" style="display: flex">{{ props.status.meta.name }}</span>
       </div>
       <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
-        <div style="margin-right: 5px">{{ deltaTime }}s ago</div>
-        <div class="dot" :style="{backgroundColor: dotColor}"
-             style="height: 15px; width: 15px; border-radius: 50%"></div>
+        <div style="margin-right: 5px">{{ uptime }}</div>
       </div>
     </div>
     <div class="meta-2" style="display: flex">
       <div class="section">
         <img class="icon" :src="os.icon" alt="system">
-        <span>{{ os.name }}</span>
-      </div>
-      <div class="section">
-        <img class="icon" src="/svg/location.svg" alt="system">
-        <span>{{ props.status.meta.location }}</span>
+        <span class="meta2-text">{{ os.name }} · {{ props.status.meta.location }}</span>
       </div>
 
     </div>
-    <!--    <div class="labels" style="display: flex; justify-content: flex-start">-->
-    <!--      <span class="label" v-for="label in props.status.meta.labels" :key="label">{{ label }}</span>-->
-    <!--    </div>-->
+    <div class="labels" style="display: flex; justify-content: flex-start">
+      <span class="label" v-for="label in props.status.meta.labels" :key="label">{{ label }}</span>
+    </div>
     <div class="charts-container" style="display: flex; justify-content: space-between">
       <div class="cpu-info hw-info">
         <div class="chart" ref="cpuChartRef"></div>
@@ -324,19 +346,50 @@ onMounted(
 </template>
 
 <style scoped>
+
+:root {
+  --text-color-1: #000;
+  --text-color-2: #383838;
+  --liteyuki-color-1: #d0e9ff;
+  --liteyuki-color-2: #a2d8f4;
+}
+
+
+.meta-1 {
+  .outline-anime {
+    margin-right: 0.5em;
+  }
+
+  .meta1-left {
+    .host-name {
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  }
+}
+
 .meta-2 {
   margin-top: 0.5em;
+
+  .meta2-text {
+    font-size: 0.9rem;
+    color: var(--text-color-2);
+  }
 }
 
 .labels {
   margin-top: 0.5em;
 
   .label {
-    padding: 2px 5px;
-    border-radius: 5px;
+    padding: 0.05rem 0.5rem;
+    border: 2px dashed;
+    border-color: var(--text-color-1);
+    border-radius: 50px;
     margin-right: 10px;
-    background-color: black;
-    color: white;
+    background-color: #dfdfdf;
+    color: var(--text-color-1);
+    font-size: 0.8rem;
   }
 }
 
@@ -344,7 +397,6 @@ onMounted(
   padding: 1em;
   border: 1px solid #ccc;
   border-radius: 20px;
-  margin: 0.5em;
   flex-direction: column;
   justify-content: space-between;
 }
@@ -385,15 +437,10 @@ onMounted(
   }
 }
 
-.net{
+.net {
   margin-top: 0.5rem;
-  .net-title {
-    font-size: 0.9rem;
-  }
-  .net-detail {
-    font-size: 0.7rem;
-  }
-  .net-chart{
+
+  .net-chart {
     width: 100%;
     aspect-ratio: 2;
   }

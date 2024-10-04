@@ -12,6 +12,7 @@ export interface Status {
         uptime: number; // uptime in seconds
         link: string | null; // 链接或是nil
         observed_at: number; // unix timestamp
+        start_time: number; // unix timestamp
     };
     hardware: {
         mem: {
