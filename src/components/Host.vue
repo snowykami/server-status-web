@@ -9,7 +9,7 @@ import {
   formatUptime,
   getBaseColor,
   getBlankColor,
-  getLinuxReleaseIcon,
+  getReleaseInfo,
   onlineTimeout
 } from "../api/utils.ts";
 
@@ -41,7 +41,7 @@ const spreadColor = computed(
 )
 const deltaTime = ref('0')
 const os = computed(() => {
-  return getLinuxReleaseIcon(status.value.meta.os.name, status.value.meta.os.version)
+  return getReleaseInfo(status.value.meta.os.name, status.value.meta.os.version)
 })
 
 const memDetail = computed(() => {

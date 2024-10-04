@@ -1,15 +1,26 @@
 export const onlineTimeout = 30
 
-export function getLinuxReleaseIcon(name: string, release: string): { name: string, icon: string } {
+export function getReleaseInfo(name: string, release: string): { name: string, icon: string } {
     if (name.toLowerCase() == 'windows') {
         return {name: 'Windows', icon: '/svg/system-windows.svg'}
+    } else if (name.toLowerCase() == 'darwin') {
+        return {name: 'macOS', icon: '/svg/system-darwin.svg'}
     } else {
         const map: Record<string, { name: string, icon: string }> = {
+            'alpine': {name: 'Alpine Linux', icon: '/svg/system-alpine.svg'},
             'arch': {name: 'Arch Linux', icon: '/svg/system-archlinux.svg'},
-            'opensuse': {name: 'openSUSE', icon: '/svg/system-opensuse.svg'},
-            'ubuntu': {name: 'Ubuntu', icon: '/svg/system-ubuntu.svg'},
             'centos': {name: 'CentOS', icon: '/svg/system-centos.svg'},
             'debian': {name: 'Debian', icon: '/svg/system-debian.svg'},
+            'deepin': {name: 'Deepin', icon: '/svg/system-deepin.svg'},
+            'elementary': {name: 'elementary OS', icon: '/svg/system-elementary.svg'},
+            'fedora': {name: 'Fedora', icon: '/svg/system-fedora.svg'},
+            'kali': {name: 'Kali Linux', icon: '/svg/system-kali.svg'},
+            'manjaro': {name: 'Manjaro', icon: '/svg/system-manjaro.svg'},
+            'opensuse': {name: 'openSUSE', icon: '/svg/system-opensuse.svg'},
+            'redhat': {name: 'Red Hat', icon: '/svg/system-redhat.svg'},
+            'suse': {name: 'SUSE', icon: '/svg/system-opensuse.svg'},   // SUSE Linux Enterprise Server
+            'ubuntu': {name: 'Ubuntu', icon: '/svg/system-ubuntu.svg'},
+            'zorin': {name: 'Zorin OS', icon: '/svg/system-zorin.svg'},
         }
         release = release.toLowerCase()
         for (const key in map) {
@@ -97,7 +108,7 @@ export function getBlankColor(percent: number, disable: boolean = false) {
 
 // 1727998501
 
-export function formatUptime(uptime: number ): string {
+export function formatUptime(uptime: number): string {
 
     const seconds = uptime
     const d = Math.floor(seconds / 86400)
