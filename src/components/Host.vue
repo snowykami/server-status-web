@@ -340,33 +340,35 @@ onMounted(
 
 <template>
   <div class="host" :style="[gradientStyle, { '--hover-border-color': hoverBorderColor }]" :id="status.meta.id">
+<!--    主机名-->
+    <div class="host-name">{{ status.meta.name }}</div>
     <div class="meta-1" style="display: flex; justify-content: space-between">
       <div class="meta1-left" style="display: flex; justify-content: flex-start; align-items: center">
-        <OutlineAnime class="outline-anime" :color="statusColor" :spreadColor="statusColor2" :is-online="isOnline"/>
-        <span class="host-name" style="display: flex">{{ status.meta.name }}</span>
-      </div>
-      <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
+        <OutlineAnime class="outline-anime" :color="statusColor" :spreadColor="statusColor2" :is-online="isOnline"/>&nbsp;
         <div class="uptime" style="margin-right: 5px"
              :style="{backgroundColor: statusColor2, borderColor: statusColor}">{{ uptime }}
-        </div>&nbsp;
-        <img @click="downloadScreenshot" class="icon" src="/svg/screenshots.svg" alt="download" style="width: 20px; height: 20px">
+        </div>
+      </div>
+      <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
+        <img @click="downloadScreenshot" src="/svg/screenshots.svg" alt="download" style="width: 20px; height: 20px">
       </div>
     </div>
     <div class="meta-2">
       <div class="section">
         <img class="icon" :src="os.icon" alt="system">
-        <span class="meta2-text">{{ os.name }}</span>
+        <span class="meta2-text">{{ os.name }} {{status.meta.os.release}} · {{status.meta.os.machine}}</span>
       </div>
       <div class="section">
         <img class="icon" src="/svg/timezone.svg" alt="location">
         <span class="meta2-text">{{ status.meta.location }} · {{ status.meta.timezone }}</span>
       </div>
-      <div class="labels section" style="display: flex; justify-content: flex-start">
+      <div class="labels section" style="display: flex">
         <img class="icon" src="/svg/label.svg" alt="labels">
-        <span class="label" v-for="label in status.meta.labels" :key="label">{{ label }}</span>
+        <span><span class="label meta2-text" v-for="label in status.meta.labels" :key="label">{{ label }}</span></span>
       </div>
 
     </div>
+    <hr>
     <div class="section-name">
       Hardware
     </div>
@@ -387,12 +389,16 @@ onMounted(
         <div class="hw-detail">{{ swapDetail }}</div>
       </div>
     </div>
+    <hr>
+<!--    -->
     <div class="net">
       <div class="section-name">
         Network
       </div>
       <div class="net-chart" ref="netChartRef"></div>
     </div>
+    <hr>
+<!--    -->
     <div class="disks">
       <div class="section-name">
         Storage
@@ -414,7 +420,7 @@ onMounted(
 }
 
 .host {
-  padding: 1em;
+  padding: 1rem;
   border: 2px solid #ccc;
   border-radius: 20px;
   flex-direction: column;
@@ -430,14 +436,12 @@ onMounted(
   .outline-anime {
     margin-right: 0.5em;
   }
+}
 
-  .meta1-left {
-    .host-name {
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
-  }
+.host-name {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
 .meta-2 {
@@ -450,6 +454,7 @@ onMounted(
 
   .section {
     margin-bottom: 0.5rem;
+    justify-content: flex-start;
   }
 }
 
@@ -461,7 +466,7 @@ onMounted(
     border: 1px dashed;
     border-color: var(--text-color-1);
     border-radius: 50px;
-    margin-right: 10px;
+    margin-right: 0.5rem;
     background-color: #dfdfdf;
     color: var(--text-color-1);
     font-size: 0.8rem;
@@ -469,7 +474,7 @@ onMounted(
 }
 
 .icon {
-  margin-right: 0.3em;
+  margin-right: 0.618rem;
   height: 16px;
 }
 
@@ -480,7 +485,7 @@ onMounted(
 }
 
 .uptime {
-  padding: 0.1em 0.5rem;
+  padding: 0 0.5rem;
   font-size: 0.8rem;
   border-radius: 50px;
   border: 1px dashed;
@@ -488,7 +493,6 @@ onMounted(
 }
 
 .charts-container {
-  margin-top: 0.5rem;
 
   .hw-info {
     width: 30%;
@@ -512,22 +516,16 @@ onMounted(
 }
 
 .section-name {
+  text-align: center;
   font-size: 1rem;
   font-weight: bold;
-  margin-top: 1rem;
 }
 
 .net {
-  margin-top: 1rem;
-
   .net-chart {
     width: 100%;
     aspect-ratio: 2;
   }
-}
-
-.disks {
-  margin-top: 1rem;
 }
 
 </style>

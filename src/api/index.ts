@@ -6,6 +6,8 @@ export interface Status {
         os: {
             name: string;
             version: string;
+            release: string;
+            machine: string;
         };
         labels: string[]; // 服务器标签
         location: string; // Chongqing, China
