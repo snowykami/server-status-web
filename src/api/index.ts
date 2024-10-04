@@ -13,6 +13,7 @@ export interface Status {
         link: string | null; // 链接或是nil
         observed_at: number; // unix timestamp
         start_time: number; // unix timestamp
+        timezone: string; // Asia/Shanghai
     };
     hardware: {
         mem: {
@@ -32,6 +33,9 @@ export interface Status {
             [key: string]: {
                 used: number;
                 total: number;
+                mountpoint: string;
+                fstype: string;
+                device: string;
             };
         };
         net: {

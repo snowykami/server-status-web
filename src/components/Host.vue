@@ -14,6 +14,8 @@ import {
 } from "../api/utils.ts";
 
 import OutlineAnime from "./OutlineAnime.vue";
+import Disk from "./Disk.vue";
+import html2canvas from "html2canvas";
 
 const props = defineProps<{
   status: Status
@@ -24,7 +26,6 @@ const status = computed(
 )
 
 const uptime = ref(formatUptime(status.value.meta.uptime))
-console.log(uptime.value)
 const cpuChartRef = ref(null);
 const memoryChartRef = ref(null);
 const swapChartRef = ref(null);
@@ -33,10 +34,10 @@ const swapChartRef = ref(null);
 const netChartRef = ref(null);
 let netStats: [number, number, number][] = []
 const isOnline = ref(true)
-const dotColor = computed(
+const statusColor = computed(
     () => isOnline.value ? '#22c55e' : '#ff4d4f'
 )
-const spreadColor = computed(
+const statusColor2 = computed(
     () => isOnline.value ? '#80ffb0' : '#fd8182'
 )
 const deltaTime = ref('0')
@@ -52,18 +53,40 @@ const swapDetail = computed(() => {
   return status.value.hardware.swap.total > 0 ? format2Size(status.value.hardware.swap.used, status.value.hardware.swap.total) : 'N/A'
 })
 
+const gradientStyle = computed(() => {
+  return {
+    borderColor: `linear-gradient(90deg, ${statusColor.value}, ${statusColor2.value})`
+  }
+})
+
+const hoverBorderColor = computed(() => {
+  return statusColor.value
+})
+
+
 function onMountedFunc() {
   const cpuChart = echarts.init(cpuChartRef.value);
   const memoryChart = echarts.init(memoryChartRef.value);
   const swapChart = echarts.init(swapChartRef.value);
   const netChart = echarts.init(netChartRef.value);
+
+  // style
   const titleStyle = {
     color: 'rgba(0, 0, 0, 0.8)',
-    fontSize: 13,
+    fontSize: 15,
   }
   const radius = ['65%', '90%']
+  const netColor = ['#a2d8f4', '#0194e3'] // Tx Rx
+  const pieLabelPosition = 'center'
+  const emphasis = {
+    label: {
+      show: true,
+      fontSize: 15,
+      position: ['50%', '20%'] // 设置标签位置为圆环外部
+    },
+  }
 
-  const netColor = ['#a2d8f4', '#10a0ed']
+  // 更新时间
   setInterval(() => {
     if (isOnline.value) {
       const deltaTime = (Date.now()) / 1000 - status.value.meta.observed_at
@@ -76,7 +99,7 @@ function onMountedFunc() {
     deltaTime.value = timeDiff.toFixed(1)
     // 判断该时间与上一个时间不同才push
     if (netStats.length === 0 || netStats[netStats.length - 1][0] !== status.value.meta.observed_at) {
-      netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])
+      netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])  // 时间 上行 下行
     }
 
     if (netStats.length > 20) {
@@ -94,7 +117,7 @@ function onMountedFunc() {
             text: status.value.hardware.cpu.percent + '%',
             left: 'center',
             top: 'center',
-            textStyle: titleStyle
+            textStyle: titleStyle,
           },
           series: [
             {
@@ -103,22 +126,16 @@ function onMountedFunc() {
               avoidLabelOverlap: false,
               label: {
                 show: false,
-                position: 'center'
+                position: pieLabelPosition
               },
-              emphasis: {
-                label: {
-                  show: true,
-                  fontSize: '20',
-                  fontWeight: 'bold'
-                }
-              },
+              emphasis: emphasis,
               labelLine: {
                 show: false
               },
               data: computed(
                   () => [
-                    {value: status.value.hardware.cpu.percent},
-                    {value: 100 - status.value.hardware.cpu.percent}
+                    {value: status.value.hardware.cpu.percent, name: 'Used'},
+                    {value: 100 - status.value.hardware.cpu.percent, name: 'Free'}
                   ]
               ).value
             }
@@ -144,21 +161,15 @@ function onMountedFunc() {
               avoidLabelOverlap: false,
               label: {
                 show: false,
-                position: 'center'
+                position: pieLabelPosition
               },
-              emphasis: {
-                label: {
-                  show: true,
-                  fontSize: '20',
-                  fontWeight: 'bold'
-                }
-              },
+              emphasis: emphasis,
               labelLine: {
                 show: false
               },
               data: [
-                {value: status.value.hardware.mem.used},
-                {value: status.value.hardware.mem.total - status.value.hardware.mem.used}
+                {value: status.value.hardware.mem.used, name: 'Used'},
+                {value: status.value.hardware.mem.total - status.value.hardware.mem.used, name: 'Free'}
               ]
             }
           ]
@@ -183,22 +194,17 @@ function onMountedFunc() {
               avoidLabelOverlap: false,
               label: {
                 show: false,
-                position: 'center'
+                position: pieLabelPosition
               },
-              emphasis: {
-                label: {
-                  show: true,
-                  fontSize: '20',
-                  fontWeight: 'bold'
-                }
-              },
+              emphasis: emphasis,
               labelLine: {
                 show: false
               },
               data: [
-                {value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.used : 0},
+                {value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.used : 0, name: 'Used'},
                 {
-                  value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.total - status.value.hardware.swap.used : 100
+                  value: status.value.hardware.swap.total > 0 ? status.value.hardware.swap.total - status.value.hardware.swap.used : 100,
+                  name: 'Free'
                 }
               ]
             }
@@ -209,16 +215,28 @@ function onMountedFunc() {
     netChart.setOption(
         {
           color: netColor,
-          title: {
-            text: 'Network',
-          },
           tooltip: {
             trigger: 'axis',
             axisPointer: {
               type: 'cross',
               label: {
-                backgroundColor: '#6a7985'
+                backgroundColor: '#0f7bc5',
+                borderRadius: 50,
+                formatter: function (params: any) {
+                  if (params.axisDimension === 'y') {
+                    return formatSizeByUnit(params.value * 8, null, 'bps');
+                  } else {
+                    return formatDate(params.value, true);
+                  }
+                }
               }
+            },
+            formatter: function (params: any) {
+              let result = formatDate(params[0].name, true) + '<br/>';
+              params.forEach(function (item: any) {
+                result += item.marker + (item.seriesName == 'Tx' ? '↑' : '↓') + ': ' + formatSizeByUnit(item.value * 8, null, 'bps') + '<br/>';
+              });
+              return result;
             }
           },
           toolbox: {
@@ -257,24 +275,29 @@ function onMountedFunc() {
           ],
           series: [
             {
-              name: 'Up',
+              name: 'Tx',
               type: 'line',
               stack: 'Total',
               areaStyle: {},
               emphasis: {
                 focus: 'series'
               },
-              data: netStats.map(item => item[1])
+              data: netStats.map(item => item[1]),
+              showSymbol: false,
+              lineStyle: {
+                type: 'dashed'
+              }
             },
             {
-              name: 'Down',
+              name: 'Rx',
               type: 'line',
               stack: 'Total',
               areaStyle: {},
               emphasis: {
                 focus: 'series'
               },
-              data: netStats.map(item => item[2])
+              data: netStats.map(item => item[2]),
+              showSymbol: false
             }
           ]
         }
@@ -292,6 +315,21 @@ function onMountedFunc() {
 }
 
 
+//      link.download = `screenshot-${status.value.meta.id}-${formatDate(Date.now(), false)}.svg`;
+
+function downloadScreenshot() {
+  const hostElement = document.querySelector(".host#"+status.value.meta.id);
+  if (hostElement) {
+    html2canvas(<HTMLElement>hostElement, { scale: 2 }).then((canvas) => {
+      const dataURL = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataURL;
+      link.download = `screenshot-${status.value.meta.id}-${formatDate(Date.now(), false)}.png`;
+      link.click();
+    });
+  }
+}
+
 onMounted(
     () => {
       onMountedFunc()
@@ -301,25 +339,36 @@ onMounted(
 </script>
 
 <template>
-  <div class="host">
+  <div class="host" :style="[gradientStyle, { '--hover-border-color': hoverBorderColor }]" :id="status.meta.id">
     <div class="meta-1" style="display: flex; justify-content: space-between">
       <div class="meta1-left" style="display: flex; justify-content: flex-start; align-items: center">
-        <OutlineAnime class="outline-anime" :color="dotColor" :spreadColor="spreadColor" :is-online="isOnline"/>
-        <span class="host-name" style="display: flex">{{ props.status.meta.name }}</span>
+        <OutlineAnime class="outline-anime" :color="statusColor" :spreadColor="statusColor2" :is-online="isOnline"/>
+        <span class="host-name" style="display: flex">{{ status.meta.name }}</span>
       </div>
       <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
-        <div style="margin-right: 5px">{{ uptime }}</div>
+        <div class="uptime" style="margin-right: 5px"
+             :style="{backgroundColor: statusColor2, borderColor: statusColor}">{{ uptime }}
+        </div>&nbsp;
+        <img @click="downloadScreenshot" class="icon" src="/svg/screenshots.svg" alt="download" style="width: 20px; height: 20px">
       </div>
     </div>
-    <div class="meta-2" style="display: flex">
+    <div class="meta-2">
       <div class="section">
         <img class="icon" :src="os.icon" alt="system">
-        <span class="meta2-text">{{ os.name }} · {{ props.status.meta.location }}</span>
+        <span class="meta2-text">{{ os.name }}</span>
+      </div>
+      <div class="section">
+        <img class="icon" src="/svg/timezone.svg" alt="location">
+        <span class="meta2-text">{{ status.meta.location }} · {{ status.meta.timezone }}</span>
+      </div>
+      <div class="labels section" style="display: flex; justify-content: flex-start">
+        <img class="icon" src="/svg/label.svg" alt="labels">
+        <span class="label" v-for="label in status.meta.labels" :key="label">{{ label }}</span>
       </div>
 
     </div>
-    <div class="labels" style="display: flex; justify-content: flex-start">
-      <span class="label" v-for="label in props.status.meta.labels" :key="label">{{ label }}</span>
+    <div class="section-name">
+      Hardware
     </div>
     <div class="charts-container" style="display: flex; justify-content: space-between">
       <div class="cpu-info hw-info">
@@ -339,7 +388,17 @@ onMounted(
       </div>
     </div>
     <div class="net">
+      <div class="section-name">
+        Network
+      </div>
       <div class="net-chart" ref="netChartRef"></div>
+    </div>
+    <div class="disks">
+      <div class="section-name">
+        Storage
+      </div>
+      <Disk v-for="disk in status.hardware.disks" :key="disk.mountpoint" :mountpoint="disk.mountpoint"
+            :device="disk.device" :used="disk.used" :total="disk.total" :fstype="disk.fstype"/>
     </div>
   </div>
 
@@ -348,12 +407,24 @@ onMounted(
 <style scoped>
 
 :root {
-  --text-color-1: #000;
-  --text-color-2: #383838;
+
   --liteyuki-color-1: #d0e9ff;
   --liteyuki-color-2: #a2d8f4;
+  --hover-border-color: #ccc;
 }
 
+.host {
+  padding: 1em;
+  border: 2px solid #ccc;
+  border-radius: 20px;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.3s ease;
+}
+
+.host:hover {
+  border-color: var(--hover-border-color); /* Change border color on hover */
+}
 
 .meta-1 {
   .outline-anime {
@@ -376,6 +447,10 @@ onMounted(
     font-size: 0.9rem;
     color: var(--text-color-2);
   }
+
+  .section {
+    margin-bottom: 0.5rem;
+  }
 }
 
 .labels {
@@ -383,7 +458,7 @@ onMounted(
 
   .label {
     padding: 0.05rem 0.5rem;
-    border: 2px dashed;
+    border: 1px dashed;
     border-color: var(--text-color-1);
     border-radius: 50px;
     margin-right: 10px;
@@ -391,14 +466,6 @@ onMounted(
     color: var(--text-color-1);
     font-size: 0.8rem;
   }
-}
-
-.host {
-  padding: 1em;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  flex-direction: column;
-  justify-content: space-between;
 }
 
 .icon {
@@ -412,6 +479,13 @@ onMounted(
   align-items: center;
 }
 
+.uptime {
+  padding: 0.1em 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 50px;
+  border: 1px dashed;
+  align-items: center;
+}
 
 .charts-container {
   margin-top: 0.5rem;
@@ -437,13 +511,23 @@ onMounted(
   }
 }
 
+.section-name {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
 .net {
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 
   .net-chart {
     width: 100%;
     aspect-ratio: 2;
   }
+}
+
+.disks {
+  margin-top: 1rem;
 }
 
 </style>

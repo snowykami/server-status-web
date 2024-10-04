@@ -8,7 +8,8 @@ const year = new Date().getFullYear()
   <h1 style="text-align: center">Server Status</h1>
   <router-view/>
   <footer>
-    © Copyright 2024-{{year}} <a href="https://sfkm.me" target="_blank">snowykami</a> All Rights Reserved
+    <a href="https://github.com/snowykami/server-status-server">Server Status Dashboard</a><br>
+    © Copyright 2024-{{year}} <a href="https://sfkm.me" target="_blank">Snowykami</a> All Rights Reserved
   </footer>
 </template>
 
@@ -29,5 +30,8 @@ footer {
   text-align: center;
   padding: 1em;
   color: #666;
+}
+a {
+  color: #36a7ec;
 }
 </style>

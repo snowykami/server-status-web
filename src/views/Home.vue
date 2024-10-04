@@ -56,7 +56,7 @@ onUnmounted(() => {
 .grid-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 10px;
+  gap: 20px;
   padding: 10px;
 }
 </style>
