@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode dev --host",
-    "build": "vue-tsc -b && vite build --mode prod && cp dist ../server-status-server/api/frontend/web",
+    "build": "vue-tsc -b && vite build --mode prod && rm -rf ../server-status-server/api/frontend/web/ && mkdir ../server-status-server/api/frontend/web/ && cp -r dist/* ../server-status-server/api/frontend/web/",
     "preview": "vite preview"
   },
   "dependencies": {
