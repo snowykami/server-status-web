@@ -118,6 +118,6 @@ export function formatDuration(duration: number): string {
     const d = Math.floor(duration / 86400);
     const h = Math.floor((duration % 86400) / 3600);
     const m = Math.floor((duration % 3600) / 60);
-    const s = duration % 60;
+    const s = Math.floor(duration % 60);
     return d > 0 ? `${d}d` : h > 0 ? `${h}h` : m > 0 ? `${m}m` : `${s}s`;
 }
