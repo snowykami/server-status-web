@@ -4,7 +4,7 @@ import {computed, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts";
 import {
   format2Size,
-  formatDate,
+  formatDate, formatDuration,
   formatSizeByUnit,
   formatUptime,
   getBaseColor,
@@ -63,6 +63,7 @@ const hoverBorderColor = computed(() => {
   return statusColor.value
 })
 
+const fontFam = 'Josefin Sans'
 
 function onMountedFunc() {
   const cpuChart = echarts.init(cpuChartRef.value);
@@ -73,15 +74,16 @@ function onMountedFunc() {
   // style
   const titleStyle = {
     color: 'rgba(0, 0, 0, 0.8)',
-    fontSize: 15,
+    fontSize: 18,
   }
-  const radius = ['65%', '90%']
+  const radius = ['65%', '80%']
   const netColor = ['#a2d8f4', '#0194e3'] // Tx Rx
   const pieLabelPosition = 'center'
   const emphasis = {
     label: {
       show: true,
       fontSize: 15,
+      fontFamily: fontFam,
       position: ['50%', '20%'] // 设置标签位置为圆环外部
     },
   }
@@ -96,7 +98,7 @@ function onMountedFunc() {
 
   function update() {
     const timeDiff = (Date.now()) / 1000 - status.value.meta.observed_at
-    deltaTime.value = timeDiff.toFixed(1)
+    deltaTime.value = formatDuration(timeDiff)
     // 判断该时间与上一个时间不同才push
     if (netStats.length === 0 || netStats[netStats.length - 1][0] !== status.value.meta.observed_at) {
       netStats.push([status.value.meta.observed_at, status.value.hardware.net.up, status.value.hardware.net.down])  // 时间 上行 下行
@@ -118,6 +120,9 @@ function onMountedFunc() {
             left: 'center',
             top: 'center',
             textStyle: titleStyle,
+          },
+          textStyle: {
+            fontFamily: fontFam
           },
           series: [
             {
@@ -154,6 +159,9 @@ function onMountedFunc() {
             top: 'center',
             textStyle: titleStyle
           },
+          textStyle: {
+            fontFamily: fontFam
+          },
           series: [
             {
               type: 'pie',
@@ -187,6 +195,9 @@ function onMountedFunc() {
             top: 'center',
             textStyle: titleStyle,
           },
+          textStyle: {
+            fontFamily: fontFam
+          },
           series: [
             {
               type: 'pie',
@@ -215,6 +226,12 @@ function onMountedFunc() {
     netChart.setOption(
         {
           color: netColor,
+          title: {
+            textStyle: titleStyle
+          },
+          textStyle: {
+            fontFamily: fontFam
+          },
           tooltip: {
             trigger: 'axis',
             axisPointer: {
@@ -228,7 +245,7 @@ function onMountedFunc() {
                   } else {
                     return formatDate(params.value, true);
                   }
-                }
+                },
               }
             },
             formatter: function (params: any) {
@@ -237,12 +254,10 @@ function onMountedFunc() {
                 result += item.marker + (item.seriesName == 'Tx' ? '↑' : '↓') + ': ' + formatSizeByUnit(item.value * 8, null, 'bps') + '<br/>';
               });
               return result;
-            }
+            },
           },
           toolbox: {
-            feature: {
-              saveAsImage: {}
-            }
+            feature: {}
           },
           grid: {
             top: '25%',
@@ -259,7 +274,7 @@ function onMountedFunc() {
               axisLabel: {
                 formatter: function (value: number) {
                   return formatDate(value, true)
-                }
+                },
               }
             }
           ],
@@ -269,7 +284,7 @@ function onMountedFunc() {
               axisLabel: {
                 formatter: function (value: number) {
                   return formatSizeByUnit(value * 8, null, 'b')
-                }
+                },
               }
             }
           ],
@@ -280,7 +295,7 @@ function onMountedFunc() {
               stack: 'Total',
               areaStyle: {},
               emphasis: {
-                focus: 'series'
+                focus: 'series',
               },
               data: netStats.map(item => item[1]),
               showSymbol: false,
@@ -318,9 +333,9 @@ function onMountedFunc() {
 //      link.download = `screenshot-${status.value.meta.id}-${formatDate(Date.now(), false)}.svg`;
 
 function downloadScreenshot() {
-  const hostElement = document.querySelector(".host#"+status.value.meta.id);
+  const hostElement = document.querySelector(".host#" + status.value.meta.id);
   if (hostElement) {
-    html2canvas(<HTMLElement>hostElement, { scale: 2 }).then((canvas) => {
+    html2canvas(<HTMLElement>hostElement, {scale: 2}).then((canvas) => {
       const dataURL = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = dataURL;
@@ -335,18 +350,20 @@ onMounted(
       onMountedFunc()
     }
 )
-
 </script>
 
 <template>
   <div class="host" :style="[gradientStyle, { '--hover-border-color': hoverBorderColor }]" :id="status.meta.id">
-<!--    主机名-->
+    <!--    主机名-->
     <div class="host-name">{{ status.meta.name }}</div>
     <div class="meta-1" style="display: flex; justify-content: space-between">
       <div class="meta1-left" style="display: flex; justify-content: flex-start; align-items: center">
         <OutlineAnime class="outline-anime" :color="statusColor" :spreadColor="statusColor2" :is-online="isOnline"/>&nbsp;
-        <div class="uptime" style="margin-right: 5px"
+        <div class="uptime time-tag" style="margin-right: 5px"
              :style="{backgroundColor: statusColor2, borderColor: statusColor}">{{ uptime }}
+        </div>
+        <div class="offline-time time-tag" v-if="!isOnline">
+          Offline for {{ deltaTime }}
         </div>
       </div>
       <div class="meta1-right" style="display: flex; justify-content: flex-end; align-items: center">
@@ -356,7 +373,7 @@ onMounted(
     <div class="meta-2">
       <div class="section">
         <img class="icon" :src="os.icon" alt="system">
-        <span class="meta2-text">{{ os.name }} {{status.meta.os.release}} · {{status.meta.os.machine}}</span>
+        <span class="meta2-text">{{ os.name }} {{ status.meta.os.release }} · {{ status.meta.os.machine }}</span>
       </div>
       <div class="section">
         <img class="icon" src="/svg/timezone.svg" alt="location">
@@ -366,9 +383,9 @@ onMounted(
         <img class="icon" src="/svg/label.svg" alt="labels">
         <span><span class="label meta2-text" v-for="label in status.meta.labels" :key="label">{{ label }}</span></span>
       </div>
-
     </div>
     <hr>
+
     <div class="section-name">
       Hardware
     </div>
@@ -390,7 +407,7 @@ onMounted(
       </div>
     </div>
     <hr>
-<!--    -->
+    <!--    -->
     <div class="net">
       <div class="section-name">
         Network
@@ -398,7 +415,7 @@ onMounted(
       <div class="net-chart" ref="netChartRef"></div>
     </div>
     <hr>
-<!--    -->
+    <!--    -->
     <div class="disks">
       <div class="section-name">
         Storage
@@ -484,7 +501,7 @@ onMounted(
   align-items: center;
 }
 
-.uptime {
+.time-tag {
   padding: 0 0.5rem;
   font-size: 0.8rem;
   border-radius: 50px;

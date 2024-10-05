@@ -72,7 +72,6 @@ export function formatDate(timestamp: number, timeOnly: boolean = false) {
 }
 
 export function getBaseColor(percent: number, disable: boolean = false) {
-    // 获取基础颜色
     // 0~60: green, 60~80: yellow, 80~90: orange, 90~100: red
     if (disable) {
         return '#9ca3af'
@@ -93,8 +92,6 @@ export function getBlankColor(percent: number, disable: boolean = false) {
     if (disable) {
         return '#e5e7eb'
     }
-
-    //相比base更浅的颜色
     if (percent < 60) {
         return '#bbf7d0'
     } else if (percent < 80) {
@@ -115,4 +112,12 @@ export function formatUptime(uptime: number): string {
     const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
     return `${d}:${h}:${m}:${s}`;
+}
+
+export function formatDuration(duration: number): string {
+    const d = Math.floor(duration / 86400);
+    const h = Math.floor((duration % 86400) / 3600);
+    const m = Math.floor((duration % 3600) / 60);
+    const s = duration % 60;
+    return d > 0 ? `${d}d` : h > 0 ? `${h}h` : m > 0 ? `${m}m` : `${s}s`;
 }
