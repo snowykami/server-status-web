@@ -1,4 +1,4 @@
-export const onlineTimeout = 30
+export let onlineTimeout = 60
 
 export function getReleaseInfo(name: string, release: string): { name: string, icon: string } {
     if (name.toLowerCase() == 'windows') {
