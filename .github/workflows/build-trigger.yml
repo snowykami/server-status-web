@@ -1,0 +1,18 @@
+name: Trigger Backend Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend workflow
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GHP }}" \
+            https://api.github.com/repos/snowykami/server-status-server/dispatches \
+            -d '{"event_type":"trigger-backend-workflow"}'
